@@ -1,0 +1,17 @@
+import { readFile, writeFile, mkdir, cp, rename } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const source = fileURLToPath(new URL('.', import.meta.url));
+const dest = join(homedir(), '.local/share/flash-coordinator/app');
+const config = join(homedir(), '.codex/config.toml');
+const original = await readFile(config, 'utf8');
+if (/^\[mcp_servers\.flash_coordinator\]/m.test(original)) throw Error('flash_coordinator is already configured. Existing entry was preserved.');
+await mkdir(dest, { recursive: true });
+for(const name of ['server.mjs','personality.txt','ui.mjs','index.html','package.json','package-lock.json','node_modules']) await cp(join(source,name),join(dest,name),{recursive:true});
+const section = `\n\n[mcp_servers.flash_coordinator]\ncommand = ${JSON.stringify(process.execPath)}\nargs = [${JSON.stringify(join(dest,'server.mjs'))}]\nenv_vars = ["AI_GATEWAY_API_KEY", "VERCEL_AI_GATEWAY_API_KEY"]\nenabled = true\nstartup_timeout_sec = 30\ntool_timeout_sec = 210\n`;
+if(await readFile(config,'utf8') !== original) throw Error('Config changed while installing; rerun to preserve concurrent edits.');
+await writeFile(`${config}.before-flash-coordinator-${Date.now()}`,original,{mode:0o600});
+await writeFile(`${config}.flash.tmp`,original+section,{mode:0o600});await rename(`${config}.flash.tmp`,config);
+const final = await readFile(config,'utf8');if(!final.startsWith(original)) throw Error('Config preservation check failed.');
+console.log(`Installed ${dest}\nAdded flash_coordinator MCP. All original config content preserved.\nMCP discovery requires refreshing/restarting the Codex connection.`);

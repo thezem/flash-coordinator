@@ -26,7 +26,7 @@ npm ci
 npm start
 ```
 
-`npm start` runs the stdio server, so it waits for an MCP client rather than opening a chat prompt. The repository is currently private; cloning requires access.
+`npm start` runs the stdio server, so it waits for an MCP client rather than opening a chat prompt.
 
 ### Connect your worker
 
